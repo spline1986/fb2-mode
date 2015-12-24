@@ -2,6 +2,8 @@ fb2-mode
 ========
 FictionBook2 reader for emacs.
 
+![Screenshot](screenshot.png)
+
 Installation
 ------------
 Add to your .emacs file:
