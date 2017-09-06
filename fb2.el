@@ -65,7 +65,7 @@
 	    (if (equal id title)
 		(progn
 		  (if (member type '("image/jpeg" "image/png"))
-		      (return (create-image (base64-decode-string (third item)) 'imagemagick t :height 500))))))))))
+		      (return (create-image (base64-decode-string (third item)) 'imagemagick t :height 500 :background "white"))))))))))
 
 (defun fb2-read ()
   (let (book title binarise)
