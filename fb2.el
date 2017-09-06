@@ -65,7 +65,7 @@
 	    (if (equal id title)
 		(progn
 		  (if (equal type "image/jpeg")
-		      (return (create-image (base64-decode-string (third item)) 'jpeg t)))
+		      (return (create-image (base64-decode-string (third item)) 'imagemagick t :height 500)))
 		  (if (equal type "image/png")
 		      (return (create-image (base64-decode-string (third item)) 'imagemagick t :height 500))))))))))
 
