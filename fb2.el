@@ -64,9 +64,7 @@
 		  type (cdr (second (second item))))
 	    (if (equal id title)
 		(progn
-		  (if (equal type "image/jpeg")
-		      (return (create-image (base64-decode-string (third item)) 'imagemagick t :height 500)))
-		  (if (equal type "image/png")
+		  (if (member type '("image/jpeg" "image/png"))
 		      (return (create-image (base64-decode-string (third item)) 'imagemagick t :height 500))))))))))
 
 (defun fb2-read ()
