@@ -1,87 +1,90 @@
+(require 'subr-x)
+
+(defun fb2-parse-p (book p &optional face)
+  (if (not (member(first p) '(title image)))
+      (dolist (subitem (cddr p))
+	(if (stringp subitem)
+	    (if face
+		(insert (propertize (string-trim subitem) 'face face))
+	      (insert (string-trim subitem)))
+	  (fb2-parse-p book subitem face))))
+  (if (listp p)
+      (if (equal (first p) 'p)
+	  (insert "\n\n")
+	(if (equal (first p) 'title)
+	    (fb2-parse-p book (third p) '((:height 1.5))))
+	(if (and (equal (first p) 'image) (image-type-available-p 'imagemagick))
+	    (progn
+	      (insert-image (fb2-binary book (replace-regexp-in-string "#" "" (cdr (car (second p))))))
+	      (insert "\n\n"))))))
+
+(defun fb2-take-children (node sub)
+  (if (listp node)
+      (dolist (subitem node)
+	(if (and (listp subitem) (equal (first subitem) sub))
+	    (return subitem)))))
+
 (defun fb2-description (node)
-  (car (xml-get-children node 'description)))
+  (fb2-take-children node 'description))
 
 (defun fb2-title-info (node)
-  (car (xml-get-children
-	(fb2-description node) 'title-info)))
+  (fb2-take-children (fb2-description node) 'title-info))
 
-(defun fb2-book-title (node)
-  (car (xml-get-children
-	(fb2-title-info node) 'book-title)))
+(defun fb2-title (node)
+  (fb2-take-children (fb2-title-info node) 'book-title))
 
 (defun fb2-author (node)
-  (car (xml-get-children
-	(fb2-title-info node) 'author)))
-
-(defun fb2-author-first-name (node)
-  (car (xml-get-children
-	(fb2-author node) 'first-name)))
-
-(defun fb2-author-last-name (node)
-  (car (xml-get-children
-	(fb2-author node) 'last-name)))
+  (let (author first last)
+    (setq author (fb2-take-children (fb2-title-info node) 'author))
+    (setq first (third (fb2-take-children author 'first-name)))
+    (setq last (third (fb2-take-children author 'last-name)))
+    (concat first " " last)))
 
 (defun fb2-annotation (node)
-  (car (xml-get-children
-	(fb2-title-info node) 'annotation)))
+  (let (annotation)
+    (setq annotation (fb2-take-children (fb2-title-info node) 'annotation))
+    (fb2-parse-p node annotation 'shadow)))
 
 (defun fb2-body (node)
-  (car (xml-get-children node 'body)))
-
-(defun fb2-paragraphs (node)
-  (let (result)
-    (dolist (paragraph (xml-node-children node))
-      (when (listp paragraph)
-	(push paragraph result)))
-    (reverse result)))
-
-(defun fb2-strong-p (paragraph)
-  (when (listp (third paragraph))
-    (if (equal (car (third paragraph)) 'strong)
-	t
-      nil)))
-
-(defun fb2-emphasis-p (paragraph)
-  (when (listp (third paragraph))
-    (if (equal (car (third paragraph)) 'emphasis)
-	t
-      nil)))
+  (fb2-take-children node 'body))
 
 (defun fb2-sections (node)
-  (xml-node-children node))
+  (let (sections)
+    (dolist (item (fb2-body node))
+      (if (and (listp item) (equal (first item) 'section))
+	  (push item sections)))
+    (reverse sections)))
 
-(defun fb2-paragraph (paragraph)
-  (cond ((fb2-emphasis-p paragraph)
-	 (propertize (concat (third (third paragraph)) "\n" "\n") 'face 'itallic))
-	((fb2-strong-p paragraph)
-	 (concat (third (third paragraph)) "\n" "\n"))
-	(t
-	 (concat (third paragraph) "\n" "\n"))))
+(defun fb2-binary (node id)
+  (let (title type)
+    (dolist (item node)
+      (if (and (listp item) (equal (first item) 'binary))
+	  (progn
+	    (setq title (cdr (first (second item)))
+		  type (cdr (second (second item))))
+	    (if (equal id title)
+		(progn
+		  (if (equal type "image/jpeg")
+		      (return (create-image (base64-decode-string (third item)) 'jpeg t)))
+		  (if (equal type "image/png")
+		      (return (create-image (base64-decode-string (third item)) 'imagemagick t :height 500))))))))))
 
 (defun fb2-read ()
-;  (interactive "fFilename: ")
-  (let (book buf-n)
-    (setf book (car (xml-parse-region (point-min) (point-max))))
-    (setq buf-n (buffer-name))
+  (let (book title binarise)
+    (setq book (libxml-parse-xml-region (point-min) (point-max)))
     (kill-buffer)
-    (get-buffer-create buf-n)
-    (switch-to-buffer buf-n)
+    (setq title (third (fb2-title book)))
+    (get-buffer-create title)
+    (switch-to-buffer title)
     (visual-line-mode)
-    (setq mode-name "FB2-reader")
-    (insert (propertize (concat (third (fb2-book-title book)) "\n") 'face '((t (:height 3.0)))))
-    (insert (concat (third (fb2-author-first-name book)) " " (third (fb2-author-last-name book)) "\n" "\n"))
-    (dolist (paragraph (fb2-paragraphs (fb2-annotation book)))
-      (insert (propertize (fb2-paragraph paragraph) 'face 'shadow)))
-    (dolist (item (fb2-sections (fb2-body book)))
-      (when (and (listp item) (equal (first item) 'section))
-	(dolist (subitem item)
-	  (when (listp subitem)
-	    (when (equal (first subitem) 'title)
-	      (insert "\n")
-	      (insert (propertize (concat (third (car (xml-get-children subitem 'p))) "\n") 'face '((t (:height 2.0)))))
-	      (insert "\n"))
-	    (when (equal (first subitem) 'p)
-	      (insert (fb2-paragraph subitem)))))))
+    (setq title (concat title "\n"))
+    (insert (propertize title 'face '((:height 2.0))))
+    (insert (concat (fb2-author book) "\n\n"))
+    (fb2-annotation book)
+    (insert "\n\n")
+    (dolist (section (fb2-sections book))
+      (fb2-parse-p book section))
+    (read-only-mode)
     (goto-char 0)))
 
 (provide 'fb2)
