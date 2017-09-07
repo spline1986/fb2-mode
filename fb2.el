@@ -1,19 +1,29 @@
 (require 'subr-x)
 
+(defvar fb2-images-height 500
+  "Height of images in fb2-mode buffer.")
+(defvar fb2-show-images t
+  "Show images in fb2-mode.")
+(defvar fb2-replace-hard-space nil
+  "Replace hard spaces by spaces in fb2-mode.")
+
 (defun fb2-parse-p (book p &optional face)
   (if (not (member(first p) '(title image)))
       (dolist (subitem (cddr p))
 	(if (stringp subitem)
-	    (if face
-		(insert (propertize (string-trim subitem) 'face face))
-	      (insert (string-trim subitem)))
+	    (progn
+	      (if fb2-replace-hard-space
+		  (setq subitem (replace-regexp-in-string " " " " subitem)))
+	      (if face
+		  (insert (propertize (string-trim subitem) 'face face))
+		(insert (string-trim subitem))))
 	  (fb2-parse-p book subitem face))))
   (if (listp p)
       (if (member (first p) '(p text-author))
 	  (insert "\n\n")
 	(if (equal (first p) 'title)
 	    (fb2-parse-p book (third p) '((:height 1.5))))
-	(if (and (equal (first p) 'image) (image-type-available-p 'imagemagick))
+	(if (and fb2-show-images (equal (first p) 'image) (image-type-available-p 'imagemagick))
 	    (progn
 	      (insert-image (fb2-binary book (replace-regexp-in-string "#" "" (cdr (car (second p))))))
 	      (insert "\n\n"))))))
@@ -65,7 +75,7 @@
 	    (if (equal id title)
 		(progn
 		  (if (member type '("image/jpeg" "image/png"))
-		      (return (create-image (base64-decode-string (third item)) 'imagemagick t :height 500 :background "white"))))))))))
+		      (return (create-image (base64-decode-string (third item)) 'imagemagick t :height fb2-images-height :background "white"))))))))))
 
 (defun fb2-read ()
   (let (book title cover filename)
@@ -76,10 +86,10 @@
     (get-buffer-create title)
     (switch-to-buffer title)
     (visual-line-mode)
-    (setq mode-name "FB2-reader")
-    (setq cover (fb2-take-children (fb2-title-info book) 'coverpage))
+    (setq mode-name "FB2-reader"
+	  cover (fb2-take-children (fb2-title-info book) 'coverpage)
+	  title (concat title "\n"))
     (fb2-parse-p book cover)
-    (setq title (concat title "\n"))
     (insert (propertize title 'face '((:height 2.0))))
     (insert (concat (fb2-author book) "\n\n"))
     (fb2-annotation book)
