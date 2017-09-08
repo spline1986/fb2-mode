@@ -35,7 +35,7 @@
   (if (listp node)
       (dolist (subitem node)
 	(if (and (listp subitem) (equal (cl-first subitem) sub))
-	    (return subitem)))))
+	    (cl-return subitem)))))
 
 (defun fb2-description (node)
   (fb2-take-children node 'description))
@@ -78,7 +78,7 @@
 	    (if (equal id title)
 		(progn
 		  (if (member type '("image/jpeg" "image/png"))
-		      (return (create-image (base64-decode-string (cl-third item)) 'imagemagick t :height fb2-images-height :background "white"))))))))))
+		      (cl-return (create-image (base64-decode-string (cl-third item)) 'imagemagick t :height fb2-images-height :background "white"))))))))))
 
 (defun fb2-read ()
   (let (book title cover filename)
