@@ -1,4 +1,5 @@
 (require 'subr-x)
+(require 'cl)
 
 (defvar fb2-images-height 500
   "Height of images in fb2-mode buffer.")
