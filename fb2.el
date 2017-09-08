@@ -1,5 +1,4 @@
 (require 'subr-x)
-(require 'cl)
 
 (defvar fb2-images-height 500
   "Height of images in fb2-mode buffer.")
@@ -9,7 +8,7 @@
   "Replace hard spaces by spaces in fb2-mode.")
 
 (defun fb2-parse-p (book p &optional face)
-  (if (not (member(first p) '(title image)))
+  (if (not (member(cl-first p) '(title image)))
       (dolist (subitem (cddr p))
 	(if (stringp subitem)
 	    (progn
@@ -20,13 +19,13 @@
 		(insert (string-trim subitem))))
 	  (fb2-parse-p book subitem face))))
   (if (listp p)
-      (if (member (first p) '(p text-author))
+      (if (member (cl-first p) '(p text-author))
 	  (insert "\n\n")
-	(if (equal (first p) 'title)
-	    (fb2-parse-p book (third p) '((:height 1.5))))
-	(if (and fb2-show-images (equal (first p) 'image) (image-type-available-p 'imagemagick))
+	(if (equal (cl-first p) 'title)
+	    (fb2-parse-p book (cl-third p) '((:height 1.5))))
+	(if (and fb2-show-images (equal (cl-first p) 'image) (image-type-available-p 'imagemagick))
 	    (progn
-	      (let ((img (fb2-binary book (replace-regexp-in-string "#" "" (cdr (car (second p)))))))
+	      (let ((img (fb2-binary book (replace-regexp-in-string "#" "" (cdr (car (cl-second p)))))))
 		(if img
 		    (progn
 		      (insert-image img)
@@ -35,7 +34,7 @@
 (defun fb2-take-children (node sub)
   (if (listp node)
       (dolist (subitem node)
-	(if (and (listp subitem) (equal (first subitem) sub))
+	(if (and (listp subitem) (equal (cl-first subitem) sub))
 	    (return subitem)))))
 
 (defun fb2-description (node)
@@ -48,11 +47,11 @@
   (fb2-take-children (fb2-title-info node) 'book-title))
 
 (defun fb2-author (node)
-  (let (author first last)
+  (let (author cl-first last)
     (setq author (fb2-take-children (fb2-title-info node) 'author))
-    (setq first (third (fb2-take-children author 'first-name)))
-    (setq last (third (fb2-take-children author 'last-name)))
-    (concat first " " last)))
+    (setq cl-first (cl-third (fb2-take-children author 'cl-first-name)))
+    (setq last (cl-third (fb2-take-children author 'last-name)))
+    (concat cl-first " " last)))
 
 (defun fb2-annotation (node)
   (let (annotation)
@@ -65,28 +64,28 @@
 (defun fb2-sections (node)
   (let (sections)
     (dolist (item (fb2-body node))
-      (if (and (listp item) (equal (first item) 'section))
+      (if (and (listp item) (equal (cl-first item) 'section))
 	  (push item sections)))
     (reverse sections)))
 
 (defun fb2-binary (node id)
   (let (title type)
     (dolist (item node)
-      (if (and (listp item) (equal (first item) 'binary))
+      (if (and (listp item) (equal (cl-first item) 'binary))
 	  (progn
-	    (setq title (cdr (first (second item)))
-		  type (cdr (second (second item))))
+	    (setq title (cdr (cl-first (cl-second item)))
+		  type (cdr (cl-second (cl-second item))))
 	    (if (equal id title)
 		(progn
 		  (if (member type '("image/jpeg" "image/png"))
-		      (return (create-image (base64-decode-string (third item)) 'imagemagick t :height fb2-images-height :background "white"))))))))))
+		      (return (create-image (base64-decode-string (cl-third item)) 'imagemagick t :height fb2-images-height :background "white"))))))))))
 
 (defun fb2-read ()
   (let (book title cover filename)
     (setq book (libxml-parse-xml-region (point-min) (point-max))
 	  filename buffer-file-name)
     (kill-buffer)
-    (setq title (third (fb2-title book)))
+    (setq title (cl-third (fb2-title book)))
     (get-buffer-create title)
     (switch-to-buffer title)
     (visual-line-mode)
