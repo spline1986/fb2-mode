@@ -5,7 +5,6 @@
 (defun fb2-mode ()
   (interactive)
   (kill-all-local-variables)
-  (setq major-mode 'wpdl-mode)
   (fb2-read)
   (run-hooks 'fb2-mode-hook))
 
