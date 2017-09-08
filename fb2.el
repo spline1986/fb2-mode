@@ -26,8 +26,11 @@
 	    (fb2-parse-p book (third p) '((:height 1.5))))
 	(if (and fb2-show-images (equal (first p) 'image) (image-type-available-p 'imagemagick))
 	    (progn
-	      (insert-image (fb2-binary book (replace-regexp-in-string "#" "" (cdr (car (second p))))))
-	      (insert "\n\n"))))))
+	      (let ((img (fb2-binary book (replace-regexp-in-string "#" "" (cdr (car (second p)))))))
+		(if img
+		    (progn
+		      (insert-image img)
+		      (insert "\n\n")))))))))
 
 (defun fb2-take-children (node sub)
   (if (listp node)
